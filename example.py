@@ -3,6 +3,7 @@ import time # for timing
 import itertools as it # for smarter loops
 from types import SimpleNamespace # for simpler dicts
 import numba # for optimization
+from numba import prange # for parallization
 import numpy as np # for numerical data
 
 from vfi import linear_interp as linear_interp # for linear interpolation
@@ -70,7 +71,7 @@ class model():
 				self.sol[key] = data[key]
 		print(f'solution loaded in {toc-tic:.2f} secs')
 
-	def solve(self,do_print=True):
+	def solve(self,do_print=False):
 
 		self.par.do_print = do_print
 		allocate_sol(self.par,self.sol)
@@ -102,37 +103,37 @@ def settings(par):
 	par.delta = 0.1 # depreciation of durables
 	par.tau = 0.1 # transaction cost
 	par.omega = 1.0 # wage rate
-	par.l_set = [0.5,1.0,1.5] # labor productivity
+	par.l_set = [0.8,1.0,1.2] # labor productivity
 	par.trans_prob_l = [[0.80,0.15,0.05],
 						[0.10,0.80,0.10],
 						[0.05,0.15,0.80]] # transition probabilities for l
 
 	# c. grids (length, minimum, maximum, curvature)
-	par.Nm = 100
+	par.Nm = 150
 	par.m_min = 0
 	par.m_max = 12
-	par.m_phi = 1.2
+	par.m_phi = 1.15
 
-	par.Nn = 80
+	par.Nn = 400
 	par.n_min = 0
 	par.n_max = 8
-	par.n_phi = 1.2
+	par.n_phi = 1.15
 
-	par.Na = 200
+	par.Na = par.Nm*2
 	par.a_min = 0
-	par.a_max = 10
-	par.a_phi = 1.2
+	par.a_max = par.m_max
+	par.a_phi = 1.15
 
-	par.Nb = 100
+	par.Nb = par.Nn*2
 	par.b_min = 0
-	par.b_max = 8
-	par.b_phi = 1.2
+	par.b_max = par.n_max
+	par.b_phi = 1.15
 
-	par.Nx = 150
+	par.Nx = 500
 	par.x_min = 0
 	par.x_max = 15
-	par.x_phi = 1.2
-
+	par.x_phi = 1.15
+	
 # create grids and make various assertions
 def create(par):
 
@@ -314,7 +315,7 @@ def compute_W_loop(	inv_w_keep,inv_w_adj,
 		 			s1_x,s1_dimx,s1_Nx,s1_y,s1_dimy,s1_Ny,
 		 			s2_x,s2_dimx,s2_Nx,s2_y,s2_dimy,s2_Ny):
 
-	for i_b in numba.prange(Nb): # loop done in paralle
+	for i_b in prange(Nb): # loop done in parallel
 
 		# allocate containers
 		xi_keep = np.empty(2)
@@ -382,7 +383,7 @@ def solve_keep_loop(inv_v,c,
 					Nl,Nn,Nm,beta,phi,gamma,rho,bubar,grid_n,grid_m,
 					s_x,s_dimx,s_Nx,s_y,s_dimy,s_Ny):
 
-	for i_n in numba.prange(Nn): # done in parallel
+	for i_n in prange(Nn): # done in parallel
 		
 		# loop l
 		for i_l in range(Nl):
@@ -406,6 +407,7 @@ def solve_keep_loop(inv_v,c,
 def solve_keep_obj(c,m,n,beta,phi,gamma,rho,bubar,interp_inv_w):
 
 	# a. penalty
+	penalty = 0
 	if c <= 1e-16: # penalty, too low c
 		c = 1e-16
 		penalty = 1000*(1e-16-c)
@@ -445,7 +447,7 @@ def solve_keep(inv_v,c,n,m,beta,phi,gamma,rho,bubar,interp_inv_w):
 		# i. optimizer
 		c_low = min(1e-8,m/4)
 		c_high = m
-		tol = 1e-5
+		tol = 1e-6
 		c_optimal = optimizer_keep(c_low,c_high,tol,m,n,beta,phi,gamma,rho,bubar,interp_inv_w)
 		
 		# ii. save
@@ -504,6 +506,7 @@ def solve_adj_loop(	inv_v,b,
 def solve_adj_obj(b,x,interp_inv_v_keep):
 
 	# a. starting value
+	penalty = 0
 	if b <= 1e-16: # penalty, too low c
 		b = 1e-16
 		penalty = 1000*(1e-16-b)
@@ -536,9 +539,14 @@ def solve_adj(inv_v,b,x,interp_inv_v_keep):
 		# i. optimizer
 		b_low = min(1e-8,x/4)
 		b_high = x
-		tol = 1e-5
+		tol = 1e-6
 		b_optimal = optimizer_adj(b_low,b_high,tol,x,interp_inv_v_keep)
 		
 		# ii. save
 		b[0] = b_optimal
 		inv_v[0] = -solve_adj_obj(b_optimal,x,interp_inv_v_keep)
+
+if __name__ == "__main__":
+
+	model_now = model()
+	model_now.solve(do_print=True)
