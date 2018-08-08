@@ -449,9 +449,8 @@ def solve_keep(inv_v,c,n,m,beta,phi,gamma,rho,bubar,interp_inv_w):
 		c_low = min(1e-8,m/4)
 		c_high = m
 		tol = 1e-6
-		xi = np.empty(2)		
-		
 		# initialize interpolator
+		#xi = np.empty(2)		
 		#xi[0] = n 			
 		#xi[1] = c_low			
 		#interp_inv_w.evaluate(xi)
