@@ -23,7 +23,7 @@ def create_interpolator_dict(grids,values,Nxi):
     # c. number of interpolation points
     s.Nxi = Nxi
     
-    # c. create if feasible
+    # d. create if feasible
     for i in range(s.dimy):
         assert np.all(values[i].shape == s.Nx)
 
@@ -139,6 +139,39 @@ class interpolator():
 
         return self.yi
 
+    def evaluate_only_last(self,xi):
+        
+        # xi is (dimx,) numpy array
+        # if xi_last was the last call then
+        # xi[0:dimx] == xi_last[0:dimx]
+        # xi[dimx] != xi_last[dimx]
+         
+        # a. new relative difference
+        j = 0
+        for d in range(1,self.dimx):
+            j += self.Nx[d-1]
+
+        xvec = self.x[j:]
+
+        d = self.dimx-1
+        self.pos_left[d] = binary_search(0,self.Nx[d],xvec,xi[d])
+        
+        denom =  (xvec[self.pos_left[d]+1] - xvec[self.pos_left[d]])
+        self.reldiff[d] = (xi[d] - xvec[self.pos_left[d]]) / denom
+
+        # b. initialize all to zero
+        for l in range(self.dimy):
+            self.yi[l] = 0
+
+        # c. interpolate
+        for i in range(self.ncube):
+            index0 = self.facs[self.dimx-1]*(self.pos_left[self.dimx-1] + self.add[i*self.dimx+self.dimx-1])
+            for l in range(self.dimy):
+                self.yi[l] += self.y[l*self.Ny + self.indexes[i] + index0]*(self.weights[i*2+0]*(1.0-self.reldiff[self.dimx-1]))
+                self.yi[l] += self.y[l*self.Ny + self.indexes[i] + index0+1]*(self.weights[i*2+1]*self.reldiff[self.dimx-1])
+
+        return self.yi
+        
     def evaluate_(self,xi):
         
         # a. reldiff

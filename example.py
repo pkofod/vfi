@@ -423,6 +423,7 @@ def solve_keep_obj(c,m,n,beta,phi,gamma,rho,bubar,interp_inv_w):
 	xi[0] = n 			
 	xi[1] = m - c			
 	inv_w = interp_inv_w.evaluate(xi)[0]
+	#inv_w = interp_inv_w.evaluate_only_last(xi)[0] # if initialized
 	w = transform(inv_w)
 	
 	# d. value of choice
@@ -448,6 +449,13 @@ def solve_keep(inv_v,c,n,m,beta,phi,gamma,rho,bubar,interp_inv_w):
 		c_low = min(1e-8,m/4)
 		c_high = m
 		tol = 1e-6
+		xi = np.empty(2)		
+		
+		# initialize interpolator
+		#xi[0] = n 			
+		#xi[1] = c_low			
+		#interp_inv_w.evaluate(xi)
+
 		c_optimal = optimizer_keep(c_low,c_high,tol,m,n,beta,phi,gamma,rho,bubar,interp_inv_w)
 		
 		# ii. save
