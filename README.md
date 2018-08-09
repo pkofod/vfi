@@ -10,6 +10,8 @@ This package provides a value function iteration algorithm written purely in Pyt
 
 The overall value function iteration algorithm is showcased in **"Fast VFI.ipynb"**.
 
+**New to Python?**: This is [my suggested work flow](https://github.com/JeppeDruedahl/NumEcon/wiki/Installation-Notes).
+
 # Troubleshooting
 
 If all @numba.njit, @numba.prange and @numba.jitclass decorators are removed, the code runs as pure Python. 
